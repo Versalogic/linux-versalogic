@@ -251,11 +251,12 @@
 	soc-supply = <&sw1c_reg>;
 };
 */
-
 &ecspi1 {
-
-        fsl,spi-num-chipselects = <1>;
-        cs-gpios = <&gpio2 30 0>; 
+        fsl,spi-num-chipselects = <2>;
+        cs-gpios = <
+		&gpio2 30 GPIO_ACTIVE_LOW
+		&gpio5 9 GPIO_ACTIVE_LOW
+		>; 
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs>;
         status = "okay";
@@ -267,18 +268,46 @@
                 spi-max-frequency = <20000000>;
                 reg = <0>;
         };
-
+/*
+        spi1dev1: spi@1 {
+                compatible = "spidev";
+                reg = <1>;
+                spi-max-frequency = <54000000>;
+        };
+*/
 
 };
 
 &ecspi3 {
 
         pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_ecspi3>;
-        status = "disabled";
+	fsl,spi-num-chipselects = <3>;
+	cs-gpios = <
+		&gpio4 24 GPIO_ACTIVE_LOW
+		&gpio4 25 GPIO_ACTIVE_LOW
+		&gpio4 26 GPIO_ACTIVE_LOW
+		>;
+        pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
+        status = "okay";
+/*
+        spi3dev0: spi@0 {
+                compatible = "bosch,bmp180";
+                reg = <0>;
+                spi-max-frequency = <10000000>;
+        };
 
+        spi3dev1: spi@1 {
+                compatible = "spidev";
+                reg = <1>;
+                spi-max-frequency = <54000000>;
+        };
+        spi3dev2: spi@2 {
+                compatible = "spidev";
+                reg = <2>;
+                spi-max-frequency = <54000000>;
+        };
+*/
 };
-
 
 &fec {
 	pinctrl-names = "default";
@@ -378,104 +407,117 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-        pmic: pfuze100@08 {
-                compatible = "fsl,pfuze100";
-                reg = <0x08>;
+	pmic: pfuze100@08 {
+		compatible = "fsl,pfuze100";
+		reg = <0x08>;
 
-                regulators {
-                        sw1a_reg: sw1ab {
-                                regulator-min-microvolt = <300000>;
-                                regulator-max-microvolt = <1875000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                                regulator-ramp-delay = <6250>;
-                        };
-
-                        sw1c_reg: sw1c {
-                                regulator-min-microvolt = <300000>;
-                                regulator-max-microvolt = <1875000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                                regulator-ramp-delay = <6250>;
-                        };
-
-                        sw2_reg: sw2 {
-                                regulator-min-microvolt = <800000>;
-                                regulator-max-microvolt = <3300000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                                regulator-ramp-delay = <6250>;
-                        };
-
-                        sw3a_reg: sw3a {
-                                regulator-min-microvolt = <400000>;
-                                regulator-max-microvolt = <1975000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                        };
-
-                        sw3b_reg: sw3b {
-                                regulator-min-microvolt = <400000>;
-                                regulator-max-microvolt = <1975000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                        };
-
-                        sw4_reg: sw4 {
-                                regulator-min-microvolt = <800000>;
-                                regulator-max-microvolt = <3300000>;
-                        };
-
-                        swbst_reg: swbst {
-                                regulator-min-microvolt = <5000000>;
-                                regulator-max-microvolt = <5150000>;
-                        };
-
-                        snvs_reg: vsnvs {
-                                regulator-min-microvolt = <1000000>;
-                                regulator-max-microvolt = <3000000>;
-                                regulator-boot-on;
-                                regulator-always-on;
-                        };
-                        vref_reg: vrefddr {
-                                regulator-boot-on;
-                                regulator-always-on;
-                        };
-
-                        vgen1_reg: vgen1 {
-                                regulator-min-microvolt = <800000>;
-                                regulator-max-microvolt = <1550000>;
-                        };
-
-                        vgen2_reg: vgen2 {
-                                regulator-min-microvolt = <800000>;
-                                regulator-max-microvolt = <1550000>;
-                        };
-
-                        vgen3_reg: vgen3 {
-                                regulator-min-microvolt = <1800000>;
-                                regulator-max-microvolt = <3300000>;
-                        };
-
-                        vgen4_reg: vgen4 {
-                                regulator-min-microvolt = <1800000>;
-                                regulator-max-microvolt = <3300000>;
-                                regulator-always-on;
-                        };
-
-                        vgen5_reg: vgen5 {
-                                regulator-min-microvolt = <1800000>;
-                                regulator-max-microvolt = <3300000>;
-                                regulator-always-on;
-                        };
-
-                        vgen6_reg: vgen6 {
-                                regulator-min-microvolt = <1800000>;
-                                regulator-max-microvolt = <3300000>;
-                                regulator-always-on;
-                        };
-                };
-        };
+		regulators {
+			/* SW1AB = V1P375_CORE */
+			sw1a_reg: sw1ab {
+				regulator-min-microvolt = <1325000>;
+				regulator-max-microvolt = <1425000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <6250>;
+			};
+			/* SW1C = V1P375_SOC */
+			sw1c_reg: sw1c {
+				regulator-min-microvolt = <1325000>;
+				regulator-max-microvolt = <1425000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <6250>;
+			};
+			/* SW2 = V3P3 */
+			sw2_reg: sw2 {
+				regulator-min-microvolt = <3150000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <6250>;
+			};
+			/* SW3A and SW3B = V1P35_DDR */
+			sw3a_reg: sw3a {
+				regulator-min-microvolt = <1300000>;
+				regulator-max-microvolt = <1400000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <6250>;
+			};
+			/* SW3A and SW3B = V1P35_DDR */
+			sw3b_reg: sw3b {
+				regulator-min-microvolt = <1300000>;
+				regulator-max-microvolt = <1400000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <6250>;
+			};
+			/* SW4 = V0P675_DDR_VTT (VTT = Enabled) */
+			sw4_reg: sw4 {
+				regulator-min-microvolt = <650000>;
+				regulator-max-microvolt = <700000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* SWBST NOT USED FOR TETRA */
+			swbst_reg: swbst {
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5150000>;
+			};
+			/* VSNVS = V3_VSNVS (Coin Cell/LDO in PMIC) */
+			snvs_reg: vsnvs {
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <3000000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VREFDDR = V0P675_DDR_VREF */
+			vref_reg: vrefddr {
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VGEN1 = V1P5_MINI */
+			vgen1_reg: vgen1 {
+				regulator-min-microvolt = <1450000>;
+				regulator-max-microvolt = <1550000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VGEN2 = V1P2_ETH */
+			vgen2_reg: vgen2 {
+				regulator-min-microvolt = <1150000>;
+				regulator-max-microvolt = <1250000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VGEN3 = V1P8_AUDIO */
+			vgen3_reg: vgen3 {
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1900000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VGEN4 = V3P3_LDO (NOT USED FOR TETRA) */
+			vgen4_reg: vgen4 {
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+			};
+			/* VGEN5 = V2P5_ETH */
+			vgen5_reg: vgen5 {
+				regulator-min-microvolt = <2400000>;
+				regulator-max-microvolt = <2600000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+			/* VGEN6 = V3_ALWAYS */
+			vgen6_reg: vgen6 {
+				regulator-min-microvolt = <2900000>;
+				regulator-max-microvolt = <3100000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+		};
+	};
 
         codec: sgtl5000@0a {
                 compatible = "fsl,sgtl5000";
@@ -502,11 +544,12 @@
                 DVDD-supply = <&reg_3p3v>;
                 pwn-gpios = <&gpio7 6 GPIO_ACTIVE_HIGH>;
                 led-gpios = <&gpio7 7 GPIO_ACTIVE_HIGH>;
-		ipu_id = <0>;
+                ipu_id = <0>;
                 csi_id = <0>;
                 mclk = <25000000>;
                 mclk_source = <0>;
-                /*extended-buffer;*/
+                extended-buffer;
+
         };
 };
 
@@ -546,6 +589,17 @@
                                 MX6QDL_PAD_NANDF_CS3__GPIO6_IO16 0x80000000
 				MX6QDL_PAD_NANDF_CLE__GPIO6_IO07           0x80000000
 */
+
+				/* 8 GPIO pins on user header */
+                                MX6QDL_PAD_SD1_CLK__GPIO1_IO20             0x0001B0B0
+                                MX6QDL_PAD_SD1_CMD__GPIO1_IO18             0x0001B0B0
+                                MX6QDL_PAD_SD1_DAT0__GPIO1_IO16            0x0001B0B0
+                                MX6QDL_PAD_SD1_DAT1__GPIO1_IO17            0x0001B0B0
+                                MX6QDL_PAD_SD1_DAT2__GPIO1_IO19            0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29          0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30          0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31         0x0001B0B0
+
 			>;
 		};
 
@@ -630,7 +684,6 @@
 
 		pinctrl_ecspi1: ecspi1grp {
 			fsl,pins = <
-				/*MX6QDL_PAD_DISP0_DAT15__ECSPI1_SS1         0x0001B0B0*/
 				MX6QDL_PAD_EIM_D16__ECSPI1_SCLK            0x0001B0B0
 				MX6QDL_PAD_EIM_D17__ECSPI1_MISO            0x0001B0B0
 				MX6QDL_PAD_EIM_D18__ECSPI1_MOSI            0x0001B0B0
@@ -639,23 +692,26 @@
 		};
 		pinctrl_ecspi1_cs: ecspi1cs {
                         fsl,pins = <
-				MX6QDL_PAD_EIM_EB2__GPIO2_IO30		   0x80000000
+				MX6QDL_PAD_EIM_EB2__GPIO2_IO30		   0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09         0x0001B0B0 
                         >;
                 };
-
 
                 pinctrl_ecspi3: ecspi3grp {
                         fsl,pins = <
                                 MX6QDL_PAD_DISP0_DAT0__ECSPI3_SCLK         0x0001B0B0
                                 MX6QDL_PAD_DISP0_DAT1__ECSPI3_MOSI         0x0001B0B0
                                 MX6QDL_PAD_DISP0_DAT2__ECSPI3_MISO         0x0001B0B0
-                                MX6QDL_PAD_DISP0_DAT3__ECSPI3_SS0          0x0001B0B0
-                                MX6QDL_PAD_DISP0_DAT4__ECSPI3_SS1          0x0001B0B0
-                                MX6QDL_PAD_DISP0_DAT5__ECSPI3_SS2          0x0001B0B0
                                 MX6QDL_PAD_DISP0_DAT7__ECSPI3_RDY          0x0001B0B0
                         >;
                 };
-
+                pinctrl_ecspi3_cs: ecspi3cs {
+                        fsl,pins = <
+                                MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24          0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25          0x0001B0B0
+                                MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26          0x0001B0B0
+                        >;
+                };
 
 		pinctrl_i2c1: i2c1grp {
 			fsl,pins = <
@@ -702,9 +758,6 @@
 		pinctrl_gpio_keys: gpio_keysgrp {
 			fsl,pins = <
 				MX6QDL_PAD_DI0_PIN2__GPIO4_IO18            0x000130B0
-				MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29          0x0001B0B0
-				MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30          0x0001B0B0
-				MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31         0x0001B0B0
 				MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06         0x0001B0B0
 				MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16         0x0001B0B0
 				MX6QDL_PAD_EIM_A25__GPIO5_IO02             0x0000B0B1
@@ -724,11 +777,6 @@
 				MX6QDL_PAD_NANDF_D6__GPIO2_IO06            0x000130B0
 				MX6QDL_PAD_NANDF_D7__GPIO2_IO07            0x0001B0B0
 				MX6QDL_PAD_NANDF_RB0__GPIO6_IO10           0x0001B0B0
-				MX6QDL_PAD_SD1_CLK__GPIO1_IO20             0x0001B0B0
-				MX6QDL_PAD_SD1_CMD__GPIO1_IO18             0x0001B0B0
-				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16            0x0001B0B0
-				MX6QDL_PAD_SD1_DAT1__GPIO1_IO17            0x0001B0B0
-				MX6QDL_PAD_SD1_DAT2__GPIO1_IO19            0x0001B0B0
 				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01            0x0001B0B0
 				MX6QDL_PAD_SD3_RST__GPIO7_IO08             0x0001B0B0
 			>;
@@ -861,7 +909,7 @@
 	csi_id = <0>;
 	v_channel = <0>;
 	lanes = <2>;
-	mipi_dphy_clk = <0x28>;
+	dphy_clk = <0x28>;
 };
 
 &pcie {
@@ -880,7 +928,7 @@
 };
 
 &snvs_poweroff {
-	status = "okay";
+	status = "disabled";
 };
 
 
