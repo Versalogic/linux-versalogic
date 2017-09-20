@@ -92,7 +92,7 @@ enum imx_thermal_trip {
  * It defines the temperature in millicelsius for passive trip point
  * that will trigger cooling action when crossed.
  */
-#define IMX_TEMP_PASSIVE		85000
+#define IMX_TEMP_PASSIVE		95000
 #define IMX_TEMP_PASSIVE_COOL_DELTA	10000
 
 #define IMX_POLLING_DELAY		2000 /* millisecond */
@@ -631,7 +631,7 @@ static int imx_get_sensor_data(struct platform_device *pdev)
 	 * Set the default critical trip point to 20 C higher
 	 * than passive trip point. Can be changed from userspace.
 	 */
-	data->temp_critical = IMX_TEMP_PASSIVE + 20 * 1000;
+	data->temp_critical = IMX_TEMP_PASSIVE + 10 * 1000;
 
 	return 0;
 }
