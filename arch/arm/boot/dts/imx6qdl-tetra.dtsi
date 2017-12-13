@@ -308,24 +308,23 @@
 		>;
         pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
         status = "okay";
-/*
+
         spi3dev0: spi@0 {
-                compatible = "bosch,bmp180";
+                compatible = "bosch,bmp085";
                 reg = <0>;
                 spi-max-frequency = <10000000>;
         };
 
         spi3dev1: spi@1 {
-                compatible = "spidev";
+                compatible = "bosch,bmp085";
                 reg = <1>;
-                spi-max-frequency = <54000000>;
+                spi-max-frequency = <10000000>;
         };
         spi3dev2: spi@2 {
-                compatible = "spidev";
+                compatible = "bosch,bmp085";
                 reg = <2>;
-                spi-max-frequency = <54000000>;
+                spi-max-frequency = <10000000>;
         };
-*/
 };
 
 &fec {

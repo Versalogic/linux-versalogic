@@ -54,7 +54,7 @@
 #include <linux/completion.h>
 #include <linux/gpio.h>
 
-#define BMP085_CHIP_ID			0x55
+#define BMP085_CHIP_ID			0x60   /*0x60 for testing BME280. 0x55 is default */
 #define BMP085_CALIBRATION_DATA_START	0xAA
 #define BMP085_CALIBRATION_DATA_LENGTH	11	/* 16 bit values */
 #define BMP085_CHIP_ID_REG		0xD0
