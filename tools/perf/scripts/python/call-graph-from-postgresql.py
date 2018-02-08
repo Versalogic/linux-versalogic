@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python2
 # call-graph-from-postgresql.py: create call-graph from postgresql database
 # Copyright (c) 2014, Intel Corporation.
 #
