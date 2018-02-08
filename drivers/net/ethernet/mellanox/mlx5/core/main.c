@@ -87,7 +87,7 @@ static struct mlx5_profile profile[] = {
 	[2] = {
 		.mask		= MLX5_PROF_MASK_QP_SIZE |
 				  MLX5_PROF_MASK_MR_CACHE,
-		.log_max_qp	= 18,
+		.log_max_qp	= 17,
 		.mr_cache[0]	= {
 			.size	= 500,
 			.limit	= 250
@@ -155,9 +155,8 @@ static struct mlx5_profile profile[] = {
 	},
 };
 
-#define FW_INIT_TIMEOUT_MILI		2000
-#define FW_INIT_WAIT_MS			2
-#define FW_PRE_INIT_TIMEOUT_MILI	10000
+#define FW_INIT_TIMEOUT_MILI	2000
+#define FW_INIT_WAIT_MS		2
 
 static int wait_fw_init(struct mlx5_core_dev *dev, u32 max_wait_mili)
 {
@@ -957,15 +956,6 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 	 */
 	dev->state = MLX5_DEVICE_STATE_UP;
 
-	/* wait for firmware to accept initialization segments configurations
-	 */
-	err = wait_fw_init(dev, FW_PRE_INIT_TIMEOUT_MILI);
-	if (err) {
-		dev_err(&dev->pdev->dev, "Firmware over %d MS in pre-initializing state, aborting\n",
-			FW_PRE_INIT_TIMEOUT_MILI);
-		goto out;
-	}
-
 	err = mlx5_cmd_init(dev);
 	if (err) {
 		dev_err(&pdev->dev, "Failed initializing command interface, aborting\n");
@@ -976,7 +966,7 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 	if (err) {
 		dev_err(&dev->pdev->dev, "Firmware over %d MS in initializing state, aborting\n",
 			FW_INIT_TIMEOUT_MILI);
-		goto err_cmd_cleanup;
+		goto out_err;
 	}
 
 	err = mlx5_core_enable_hca(dev, 0);
@@ -1169,7 +1159,7 @@ static int mlx5_unload_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 	int err = 0;
 
 	if (cleanup)
-		mlx5_drain_health_recovery(dev);
+		mlx5_drain_health_wq(dev);
 
 	mutex_lock(&dev->intf_state_mutex);
 	if (test_bit(MLX5_INTERFACE_STATE_DOWN, &dev->intf_state)) {
@@ -1283,7 +1273,6 @@ static int init_one(struct pci_dev *pdev,
 	if (err)
 		goto clean_load;
 
-	pci_save_state(pdev);
 	return 0;
 
 clean_load:
@@ -1332,8 +1321,9 @@ static pci_ers_result_t mlx5_pci_err_detected(struct pci_dev *pdev,
 
 	mlx5_enter_error_state(dev);
 	mlx5_unload_one(dev, priv, false);
-	/* In case of kernel call drain the health wq */
+	/* In case of kernel call save the pci state and drain the health wq */
 	if (state) {
+		pci_save_state(pdev);
 		mlx5_drain_health_wq(dev);
 		mlx5_pci_disable_device(dev);
 	}
@@ -1385,7 +1375,6 @@ static pci_ers_result_t mlx5_pci_slot_reset(struct pci_dev *pdev)
 
 	pci_set_master(pdev);
 	pci_restore_state(pdev);
-	pci_save_state(pdev);
 
 	if (wait_vital(pdev)) {
 		dev_err(&pdev->dev, "%s: wait_vital timed out\n", __func__);

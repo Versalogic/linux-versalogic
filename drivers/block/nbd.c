@@ -54,7 +54,7 @@ struct nbd_device {
 
 	struct mutex tx_lock;
 	struct gendisk *disk;
-	loff_t blksize;
+	int blksize;
 	loff_t bytesize;
 
 	/* protects initialization and shutdown of the socket */
@@ -126,7 +126,7 @@ static void nbd_size_update(struct nbd_device *nbd, struct block_device *bdev)
 }
 
 static int nbd_size_set(struct nbd_device *nbd, struct block_device *bdev,
-			loff_t blocksize, loff_t nr_blocks)
+			int blocksize, int nr_blocks)
 {
 	int ret;
 
@@ -135,7 +135,7 @@ static int nbd_size_set(struct nbd_device *nbd, struct block_device *bdev,
 		return ret;
 
 	nbd->blksize = blocksize;
-	nbd->bytesize = blocksize * nr_blocks;
+	nbd->bytesize = (loff_t)blocksize * (loff_t)nr_blocks;
 
 	nbd_size_update(nbd, bdev);
 
@@ -272,7 +272,6 @@ static int nbd_send_cmd(struct nbd_device *nbd, struct nbd_cmd *cmd)
 	int result, flags;
 	struct nbd_request request;
 	unsigned long size = blk_rq_bytes(req);
-	struct bio *bio;
 	u32 type;
 
 	if (req->cmd_type == REQ_TYPE_DRV_PRIV)
@@ -306,20 +305,16 @@ static int nbd_send_cmd(struct nbd_device *nbd, struct nbd_cmd *cmd)
 		return -EIO;
 	}
 
-	if (type != NBD_CMD_WRITE)
-		return 0;
-
-	flags = 0;
-	bio = req->bio;
-	while (bio) {
-		struct bio *next = bio->bi_next;
-		struct bvec_iter iter;
+	if (type == NBD_CMD_WRITE) {
+		struct req_iterator iter;
 		struct bio_vec bvec;
-
-		bio_for_each_segment(bvec, bio, iter) {
-			bool is_last = !next && bio_iter_last(bvec, iter);
-
-			if (is_last)
+		/*
+		 * we are really probing at internals to determine
+		 * whether to set MSG_MORE or not...
+		 */
+		rq_for_each_segment(bvec, req, iter) {
+			flags = 0;
+			if (!rq_iter_last(bvec, iter))
 				flags = MSG_MORE;
 			dev_dbg(nbd_to_dev(nbd), "request %p: sending %d bytes data\n",
 				cmd, bvec.bv_len);
@@ -330,16 +325,7 @@ static int nbd_send_cmd(struct nbd_device *nbd, struct nbd_cmd *cmd)
 					result);
 				return -EIO;
 			}
-			/*
-			 * The completion might already have come in,
-			 * so break for the last one instead of letting
-			 * the iterator do it. This prevents use-after-free
-			 * of the bio.
-			 */
-			if (is_last)
-				break;
 		}
-		bio = next;
 	}
 	return 0;
 }
@@ -662,16 +648,13 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *nbd,
 
 	case NBD_SET_SIZE:
 		return nbd_size_set(nbd, bdev, nbd->blksize,
-					div_s64(arg, nbd->blksize));
+				    arg / nbd->blksize);
 
 	case NBD_SET_SIZE_BLOCKS:
 		return nbd_size_set(nbd, bdev, nbd->blksize, arg);
 
 	case NBD_SET_TIMEOUT:
-		if (arg) {
-			nbd->tag_set.timeout = arg * HZ;
-			blk_queue_rq_timeout(nbd->disk->queue, arg * HZ);
-		}
+		nbd->tag_set.timeout = arg * HZ;
 		return 0;
 
 	case NBD_SET_FLAGS:
@@ -834,7 +817,7 @@ static int nbd_dev_dbg_init(struct nbd_device *nbd)
 	debugfs_create_file("tasks", 0444, dir, nbd, &nbd_dbg_tasks_ops);
 	debugfs_create_u64("size_bytes", 0444, dir, &nbd->bytesize);
 	debugfs_create_u32("timeout", 0444, dir, &nbd->tag_set.timeout);
-	debugfs_create_u64("blocksize", 0444, dir, &nbd->blksize);
+	debugfs_create_u32("blocksize", 0444, dir, &nbd->blksize);
 	debugfs_create_file("flags", 0444, dir, nbd, &nbd_dbg_flags_ops);
 
 	return 0;
@@ -946,7 +929,6 @@ static int __init nbd_init(void)
 		return -ENOMEM;
 
 	for (i = 0; i < nbds_max; i++) {
-		struct request_queue *q;
 		struct gendisk *disk = alloc_disk(1 << part_shift);
 		if (!disk)
 			goto out;
@@ -972,13 +954,12 @@ static int __init nbd_init(void)
 		 * every gendisk to have its very own request_queue struct.
 		 * These structs are big so we dynamically allocate them.
 		 */
-		q = blk_mq_init_queue(&nbd_dev[i].tag_set);
-		if (IS_ERR(q)) {
+		disk->queue = blk_mq_init_queue(&nbd_dev[i].tag_set);
+		if (!disk->queue) {
 			blk_mq_free_tag_set(&nbd_dev[i].tag_set);
 			put_disk(disk);
 			goto out;
 		}
-		disk->queue = q;
 
 		/*
 		 * Tell the block layer that we are not a rotational device

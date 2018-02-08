@@ -51,8 +51,6 @@ static int __init hash_setup(char *str)
 			ima_hash_algo = HASH_ALGO_SHA1;
 		else if (strncmp(str, "md5", 3) == 0)
 			ima_hash_algo = HASH_ALGO_MD5;
-		else
-			return 1;
 		goto out;
 	}
 
@@ -62,8 +60,6 @@ static int __init hash_setup(char *str)
 			break;
 		}
 	}
-	if (i == HASH_ALGO__LAST)
-		return 1;
 out:
 	hash_setup_done = 1;
 	return 1;
@@ -87,7 +83,6 @@ static void ima_rdwr_violation_check(struct file *file,
 				     const char **pathname)
 {
 	struct inode *inode = file_inode(file);
-	char filename[NAME_MAX];
 	fmode_t mode = file->f_mode;
 	bool send_tomtou = false, send_writers = false;
 
@@ -107,7 +102,7 @@ static void ima_rdwr_violation_check(struct file *file,
 	if (!send_tomtou && !send_writers)
 		return;
 
-	*pathname = ima_d_path(&file->f_path, pathbuf, filename);
+	*pathname = ima_d_path(&file->f_path, pathbuf);
 
 	if (send_tomtou)
 		ima_add_violation(file, *pathname, iint,
@@ -166,7 +161,6 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
 	struct integrity_iint_cache *iint = NULL;
 	struct ima_template_desc *template_desc;
 	char *pathbuf = NULL;
-	char filename[NAME_MAX];
 	const char *pathname = NULL;
 	int rc = -ENOMEM, action, must_appraise;
 	int pcr = CONFIG_IMA_MEASURE_PCR_IDX;
@@ -245,8 +239,8 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
 		goto out_digsig;
 	}
 
-	if (!pathbuf)	/* ima_rdwr_violation possibly pre-fetched */
-		pathname = ima_d_path(&file->f_path, &pathbuf, filename);
+	if (!pathname)	/* ima_rdwr_violation possibly pre-fetched */
+		pathname = ima_d_path(&file->f_path, &pathbuf);
 
 	if (action & IMA_MEASURE)
 		ima_store_measurement(iint, file, pathname,

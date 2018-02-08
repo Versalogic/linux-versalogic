@@ -5,7 +5,6 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include "event.h"
-#include "map.h"
 #include "symbol.h"
 
 #define HELP_PAD "\t\t\t\t"
@@ -175,13 +174,8 @@ int callchain_merge(struct callchain_cursor *cursor,
  */
 static inline void callchain_cursor_reset(struct callchain_cursor *cursor)
 {
-	struct callchain_cursor_node *node;
-
 	cursor->nr = 0;
 	cursor->last = &cursor->first;
-
-	for (node = cursor->first; node != NULL; node = node->next)
-		map__zput(node->map);
 }
 
 int callchain_cursor_append(struct callchain_cursor *cursor, u64 ip,

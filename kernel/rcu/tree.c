@@ -792,13 +792,8 @@ void rcu_irq_exit(void)
 	long long oldval;
 	struct rcu_dynticks *rdtp;
 
-	rdtp = this_cpu_ptr(&rcu_dynticks);
-
-	/* Page faults can happen in NMI handlers, so check... */
-	if (READ_ONCE(rdtp->dynticks_nmi_nesting))
-		return;
-
 	RCU_LOCKDEP_WARN(!irqs_disabled(), "rcu_irq_exit() invoked with irqs enabled!!!");
+	rdtp = this_cpu_ptr(&rcu_dynticks);
 	oldval = rdtp->dynticks_nesting;
 	rdtp->dynticks_nesting--;
 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
@@ -935,13 +930,8 @@ void rcu_irq_enter(void)
 	struct rcu_dynticks *rdtp;
 	long long oldval;
 
-	rdtp = this_cpu_ptr(&rcu_dynticks);
-
-	/* Page faults can happen in NMI handlers, so check... */
-	if (READ_ONCE(rdtp->dynticks_nmi_nesting))
-		return;
-
 	RCU_LOCKDEP_WARN(!irqs_disabled(), "rcu_irq_enter() invoked with irqs enabled!!!");
+	rdtp = this_cpu_ptr(&rcu_dynticks);
 	oldval = rdtp->dynticks_nesting;
 	rdtp->dynticks_nesting++;
 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&

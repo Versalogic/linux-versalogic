@@ -3135,13 +3135,6 @@ static void hugetlb_vm_op_close(struct vm_area_struct *vma)
 	}
 }
 
-static int hugetlb_vm_op_split(struct vm_area_struct *vma, unsigned long addr)
-{
-	if (addr & ~(huge_page_mask(hstate_vma(vma))))
-		return -EINVAL;
-	return 0;
-}
-
 /*
  * We cannot handle pagefaults against hugetlb pages at all.  They cause
  * handle_mm_fault() to try to instantiate regular-sized pages in the
@@ -3158,7 +3151,6 @@ const struct vm_operations_struct hugetlb_vm_ops = {
 	.fault = hugetlb_vm_op_fault,
 	.open = hugetlb_vm_op_open,
 	.close = hugetlb_vm_op_close,
-	.split = hugetlb_vm_op_split,
 };
 
 static pte_t make_huge_pte(struct vm_area_struct *vma, struct page *page,
@@ -4479,7 +4471,6 @@ follow_huge_pmd(struct mm_struct *mm, unsigned long address,
 {
 	struct page *page = NULL;
 	spinlock_t *ptl;
-	pte_t pte;
 retry:
 	ptl = pmd_lockptr(mm, pmd);
 	spin_lock(ptl);
@@ -4489,13 +4480,12 @@ retry:
 	 */
 	if (!pmd_huge(*pmd))
 		goto out;
-	pte = huge_ptep_get((pte_t *)pmd);
-	if (pte_present(pte)) {
+	if (pmd_present(*pmd)) {
 		page = pmd_page(*pmd) + ((address & ~PMD_MASK) >> PAGE_SHIFT);
 		if (flags & FOLL_GET)
 			get_page(page);
 	} else {
-		if (is_hugetlb_entry_migration(pte)) {
+		if (is_hugetlb_entry_migration(huge_ptep_get((pte_t *)pmd))) {
 			spin_unlock(ptl);
 			__migration_entry_wait(mm, (pte_t *)pmd, ptl);
 			goto retry;
