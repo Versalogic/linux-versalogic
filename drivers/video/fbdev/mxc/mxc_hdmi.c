@@ -46,6 +46,7 @@
 
 #include <linux/console.h>
 #include <linux/types.h>
+#include <linux/switch.h>
 
 #include "../edid.h"
 #include <video/mxc_edid.h>
@@ -169,7 +170,10 @@ struct mxc_hdmi {
 	struct fb_videomode default_mode;
 	struct fb_videomode previous_non_vga_mode;
 	bool requesting_vga_for_initialization;
-
+#ifdef CONFIG_SWITCH
+	struct switch_dev sdev_audio;
+	struct switch_dev sdev_display;
+#endif
 	int *gpr_base;
 	int *gpr_hdmi_base;
 	int *gpr_sdma_base;
@@ -178,6 +182,7 @@ struct mxc_hdmi {
 	struct hdmi_phy_reg_config phy_config;
 
 	struct pinctrl *pinctrl;
+	u32 yres_virtual;
 };
 
 static int hdmi_major;
@@ -1900,6 +1905,8 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 		/* update fbi mode in case modelist is updated */
 		hdmi->fbi->mode = (struct fb_videomode *)mode;
 		fb_videomode_to_var(&hdmi->fbi->var, mode);
+		if (hdmi->yres_virtual > 0)
+			hdmi->fbi->var.yres_virtual = hdmi->yres_virtual;
 		/* update hdmi setting in case EDID data updated  */
 		mxc_hdmi_setup(hdmi, 0);
 	} else {
@@ -2021,7 +2028,11 @@ static void hotplug_worker(struct work_struct *work)
 			hdmi_writeb(val, HDMI_PHY_POL0);
 
 			hdmi_set_cable_state(1);
-
+#ifdef CONFIG_SWITCH
+			if (!hdmi->hdmi_data.video_mode.mDVI)
+				switch_set_state(&hdmi->sdev_audio, 1);
+			switch_set_state(&hdmi->sdev_display, 1);
+#endif
 			sprintf(event_string, "EVENT=plugin");
 			kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
 #ifdef CONFIG_MXC_HDMI_CEC
@@ -2029,6 +2040,10 @@ static void hotplug_worker(struct work_struct *work)
 #endif
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
+#ifdef CONFIG_SWITCH
+			switch_set_state(&hdmi->sdev_audio, 0);
+			switch_set_state(&hdmi->sdev_display, 0);
+#endif
 			dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 			hdmi_set_cable_state(0);
 			mxc_hdmi_abort_stream();
@@ -2296,6 +2311,7 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 {
 	struct fb_event *event = v;
 	struct mxc_hdmi *hdmi = container_of(nb, struct mxc_hdmi, nb);
+	struct fb_videomode *mode;
 
 	if (strcmp(event->info->fix.id, hdmi->fbi->fix.id))
 		return 0;
@@ -2315,7 +2331,11 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 
 	case FB_EVENT_MODE_CHANGE:
 		dev_dbg(&hdmi->pdev->dev, "event=FB_EVENT_MODE_CHANGE\n");
-		if (hdmi->fb_reg)
+		mode = (struct fb_videomode *)event->data;
+		if (hdmi->fbi != NULL)
+			hdmi->yres_virtual = hdmi->fbi->var.yres_virtual;
+		if ((hdmi->fb_reg) && (mode != NULL) &&
+			!fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode))
 			mxc_hdmi_setup(hdmi, val);
 		break;
 
@@ -2831,9 +2851,16 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 		ret = (int)hdmi->disp_mxc_hdmi;
 		goto edispdrv;
 	}
+#ifdef CONFIG_SWITCH
+	hdmi->sdev_audio.name = "hdmi_audio";
+	hdmi->sdev_display.name = "hdmi";
+	switch_dev_register(&hdmi->sdev_audio);
+	switch_dev_register(&hdmi->sdev_display);
+#endif
 	mxc_dispdrv_setdata(hdmi->disp_mxc_hdmi, hdmi);
 
 	platform_set_drvdata(pdev, hdmi);
+	mxc_dispdrv_setdev(hdmi->disp_mxc_hdmi, &pdev->dev);
 
 	hdmi_regulator = devm_regulator_get(&pdev->dev, "HDMI");
 	if (!IS_ERR(hdmi_regulator)) {
@@ -2869,7 +2896,10 @@ static int mxc_hdmi_remove(struct platform_device *pdev)
 	int irq = platform_get_irq(pdev, 0);
 
 	fb_unregister_client(&hdmi->nb);
-
+#ifdef CONFIG_SWITCH
+	switch_dev_unregister(&hdmi->sdev_audio);
+	switch_dev_unregister(&hdmi->sdev_display);
+#endif
 	mxc_dispdrv_puthandle(hdmi->disp_mxc_hdmi);
 	mxc_dispdrv_unregister(hdmi->disp_mxc_hdmi);
 	iounmap(hdmi->gpr_base);

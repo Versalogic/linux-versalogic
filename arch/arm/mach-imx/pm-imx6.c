@@ -24,6 +24,7 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
+#include <linux/wakeup_reason.h>
 #include <asm/cacheflush.h>
 #include <asm/fncpy.h>
 #include <asm/mach/map.h>
@@ -91,8 +92,6 @@
 #define UART_UBRC	0xac
 #define UART_UTS	0xb4
 
-#define IOMUXC_GPR5_CLOCK_AFCG_X_BYPASS_MASK	0xf800
-
 extern unsigned long iram_tlb_base_addr;
 extern unsigned long iram_tlb_phys_addr;
 
@@ -128,6 +127,9 @@ extern unsigned long iram_tlb_phys_addr;
 #define QSPI_LUTKEY_VALUE	0x5AF05AF0
 #define QSPI_LCKER_LOCK		0x1
 #define QSPI_LCKER_UNLOCK	0x2
+
+#define IMX6_GPC_IMR1_OFFSET  0x8
+#define IMX6_GPC_ISR1_OFFSET  0x18
 
 enum qspi_regs_valuetype {
 	QSPI_PREDEFINED,
@@ -270,6 +272,7 @@ static void __iomem *qspi_base;
 static unsigned int ocram_size;
 static void __iomem *ccm_base;
 static void __iomem *suspend_ocram_base;
+static void __iomem *gpc_mem_base;
 static void (*imx6_suspend_in_ocram_fn)(void __iomem *ocram_vbase);
 struct regmap *romcp;
 
@@ -423,24 +426,6 @@ static const u32 imx6ul_mmdc_lpddr2_offset[] __initconst = {
 	0x800, 0x004, 0x01c,
 };
 
-static const u32 imx6sll_mmdc_io_offset[] __initconst = {
-	0x294, 0x298, 0x29c, 0x2a0, /* DQM0 ~ DQM3 */
-	0x544, 0x54c, 0x554, 0x558, /* GPR_B0DS ~ GPR_B3DS */
-	0x530, 0x540, 0x2ac, 0x52c, /* MODE_CTL, MODE, SDCLK_0, GPR_ADDDS */
-	0x2a4, 0x2a8,		    /* SDCKE0, SDCKE1*/
-};
-
-static const u32 imx6sll_mmdc_lpddr3_offset[] __initconst = {
-	0x01c, 0x85c, 0x800, 0x890,
-	0x8b8, 0x81c, 0x820, 0x82c,
-	0x830, 0x83c, 0x848, 0x850,
-	0x8c0, 0x8b8, 0x004, 0x008,
-	0x00c, 0x010, 0x038, 0x014,
-	0x018, 0x01c, 0x02c, 0x030,
-	0x040, 0x000, 0x020, 0x818,
-	0x800, 0x004, 0x01c,
-};
-
 static const struct imx6_pm_socdata imx6q_pm_data __initconst = {
 	.mmdc_compat = "fsl,imx6q-mmdc",
 	.src_compat = "fsl,imx6q-src",
@@ -529,17 +514,6 @@ static const struct imx6_pm_socdata imx6ul_lpddr2_pm_data __initconst = {
 	.mmdc_offset = imx6ul_mmdc_lpddr2_offset,
 };
 
-static const struct imx6_pm_socdata imx6sll_pm_data __initconst = {
-	.mmdc_compat = "fsl,imx6sll-mmdc",
-	.src_compat = "fsl,imx6sll-src",
-	.iomuxc_compat = "fsl,imx6sll-iomuxc",
-	.gpc_compat = "fsl,imx6sll-gpc",
-	.mmdc_io_num = ARRAY_SIZE(imx6sll_mmdc_io_offset),
-	.mmdc_io_offset = imx6sll_mmdc_io_offset,
-	.mmdc_num = ARRAY_SIZE(imx6sll_mmdc_lpddr3_offset),
-	.mmdc_offset = imx6sll_mmdc_lpddr3_offset,
-};
-
 static struct map_desc iram_tlb_io_desc __initdata = {
 	/* .virtual and .pfn are run-time assigned */
 	.length     = SZ_1M,
@@ -593,7 +567,7 @@ struct imx6_cpu_pm_info {
 	struct imx6_pm_base anatop_base;
 	u32 ttbr1; /* Store TTBR1 */
 	u32 mmdc_io_num; /* Number of MMDC IOs which need saved/restored. */
-	u32 mmdc_io_val[MX6_MAX_MMDC_IO_NUM][3]; /* To save offset, value, low power settings */
+	u32 mmdc_io_val[MX6_MAX_MMDC_IO_NUM][2]; /* To save offset and value */
 	u32 mmdc_num; /* Number of MMDC registers which need saved/restored. */
 	u32 mmdc_val[MX6_MAX_MMDC_NUM][2];
 } __aligned(8);
@@ -674,18 +648,11 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x2 << BP_CLPCR_LPM;
 		val &= ~BM_CLPCR_VSTBY;
 		val &= ~BM_CLPCR_SBYOS;
-		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6sll())
+		if (cpu_is_imx6sl() || cpu_is_imx6sx())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
 		if (cpu_is_imx6sl() || cpu_is_imx6sx() ||
-		    cpu_is_imx6ul() || cpu_is_imx6ull() || cpu_is_imx6sll())
+		    cpu_is_imx6ul() || cpu_is_imx6ull())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
-		else if (cpu_is_imx6q() &&
-		    imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2 &&
-		    imx_mmdc_get_lpddr2_2ch_mode() == IMX_LPDDR2_2CH_MODE) {
-			/* keep handshake enabled for lpddr2 2ch-mode */
-			val &= ~BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
-			val &= ~BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
-		}
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
 		break;
@@ -699,18 +666,11 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x3 << BP_CLPCR_STBY_COUNT;
 		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
-		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6sll())
+		if (cpu_is_imx6sl() || cpu_is_imx6sx())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
 		if (cpu_is_imx6sl() || cpu_is_imx6sx() ||
-		    cpu_is_imx6ul() || cpu_is_imx6ull() || cpu_is_imx6sll())
+		    cpu_is_imx6ul() || cpu_is_imx6ull())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
-		else if (cpu_is_imx6q() &&
-		    imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2 &&
-		    imx_mmdc_get_lpddr2_2ch_mode() == IMX_LPDDR2_2CH_MODE) {
-			/* keep handshake enabled for lpddr2 2ch-mode */
-			val &= ~BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
-			val &= ~BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
-		}
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
 		break;
@@ -818,10 +778,12 @@ static void imx6_qspi_restore(struct qspi_regs *pregs, int reg_num)
 
 static int imx6q_pm_enter(suspend_state_t state)
 {
-
-	struct regmap *g;
 	unsigned int console_saved_reg[10] = {0};
 	static unsigned int ccm_ccgr4, ccm_ccgr6;
+#ifdef CONFIG_SUSPEND
+	u32 imr[4], isr[4], i, irq_num, gpc_isr;
+#endif
+
 
 #ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
@@ -847,22 +809,6 @@ static int imx6q_pm_enter(suspend_state_t state)
 		imx6q_set_lpm(STOP_POWER_ON);
 		imx6q_set_int_mem_clk_lpm(true);
 		imx_gpc_pre_suspend(false);
-                /*
-                 * L2 can exit by 'reset' or Inband beacon (from remote EP)
-                 * toggling phy_powerdown has same effect as 'inband beacon'
-                 * So, toggle bit18 of GPR1, used as a workaround of errata
-                 * "PCIe PCIe does not support L2 Power Down"
-                 */
-                if (IS_ENABLED(CONFIG_PCI_IMX6)) {
-                        g = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-                        if (IS_ERR(g)) {
-                                pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
-                                return PTR_ERR(g);
-                        }
-                        regmap_update_bits(g, IOMUXC_GPR1, IMX6Q_GPR1_PCIE_TEST_PD,
-                                        IMX6Q_GPR1_PCIE_TEST_PD);
-                }
-
 #ifdef CONFIG_SOC_IMX6SL
 		if (cpu_is_imx6sl())
 			imx6sl_set_wait_clk(true);
@@ -873,18 +819,6 @@ static int imx6q_pm_enter(suspend_state_t state)
 		if (cpu_is_imx6sl())
 			imx6sl_set_wait_clk(false);
 #endif
-
-                /*
-                 * L2 can exit by 'reset' or Inband beacon (from remote EP)
-                 * toggling phy_powerdown has same effect as 'inband beacon'
-                 * So, toggle bit18 of GPR1, used as a workaround of errata
-                 * "PCIe PCIe does not support L2 Power Down"
-                 */
-                if (IS_ENABLED(CONFIG_PCI_IMX6)) {
-                        regmap_update_bits(g, IOMUXC_GPR1, IMX6Q_GPR1_PCIE_TEST_PD,
-                                        !IMX6Q_GPR1_PCIE_TEST_PD);
-                }
-
 		imx_gpc_post_resume();
 		imx6q_set_lpm(WAIT_CLOCKED);
 		break;
@@ -900,25 +834,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 			imx6_enable_rbc(true);
 		imx_gpc_pre_suspend(true);
 		imx_anatop_pre_suspend();
-
-
-		/*
-		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
-		 * toggling phy_powerdown has same effect as 'inband beacon'
-		 * So, toggle bit18 of GPR1, used as a workaround of errata
-		 * "PCIe PCIe does not support L2 Power Down"
-		 */
-		if (IS_ENABLED(CONFIG_PCI_IMX6)) {
-			g = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-			if (IS_ERR(g)) {
-				pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
-				return PTR_ERR(g);
-			}
-			regmap_update_bits(g, IOMUXC_GPR1, IMX6Q_GPR1_PCIE_TEST_PD,
-					IMX6Q_GPR1_PCIE_TEST_PD);
-		}
-		if ((cpu_is_imx6ull() || cpu_is_imx6sll()) &&
-			imx_gpc_is_mf_mix_off())
+		if (cpu_is_imx6ull() && imx_gpc_is_mf_mix_off())
 			imx6_console_save(console_saved_reg);
 		if (cpu_is_imx6sx() && imx_gpc_is_mf_mix_off()) {
 			ccm_ccgr4 = readl_relaxed(ccm_base + CCGR4);
@@ -958,23 +874,10 @@ static int imx6q_pm_enter(suspend_state_t state)
 					sizeof(qspi_regs_imx6sx) /
 					sizeof(struct qspi_regs));
 		}
-		if ((cpu_is_imx6ull() || cpu_is_imx6sll()) &&
-			imx_gpc_is_mf_mix_off())
+		if (cpu_is_imx6ull() && imx_gpc_is_mf_mix_off())
 			imx6_console_restore(console_saved_reg);
 		if (cpu_is_imx6q() || cpu_is_imx6dl())
 			imx_smp_prepare();
-
-		/*
-		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
-		 * toggling phy_powerdown has same effect as 'inband beacon'
-		 * So, toggle bit18 of GPR1, used as a workaround of errata
-		 * "PCIe PCIe does not support L2 Power Down"
-		 */
-		if (IS_ENABLED(CONFIG_PCI_IMX6)) {
-			regmap_update_bits(g, IOMUXC_GPR1, IMX6Q_GPR1_PCIE_TEST_PD,
-					!IMX6Q_GPR1_PCIE_TEST_PD);
-		}
-
 		imx_anatop_post_resume();
 		imx_gpc_post_resume();
 		imx6_enable_rbc(false);
@@ -985,6 +888,25 @@ static int imx6q_pm_enter(suspend_state_t state)
 	default:
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_SUSPEND
+	for (i = 0; i < 4; i++) {
+		imr[i] = readl_relaxed(gpc_mem_base +
+					IMX6_GPC_IMR1_OFFSET + i * 4);
+		isr[i] = readl_relaxed(gpc_mem_base +
+				IMX6_GPC_ISR1_OFFSET + i * 4);
+		irq_num = (i + 1)*32;
+		if ((~imr[i]) & isr[i]) {
+			gpc_isr = (~imr[i]) & isr[i];
+			while (gpc_isr) {
+			if (gpc_isr & 0x1)
+				log_wakeup_reason(irq_num);
+				irq_num++;
+				gpc_isr /= 2;
+			}
+		}
+	}
+#endif
 
 #ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
@@ -1185,26 +1107,13 @@ static int __init imx6q_suspend_init(const struct imx6_pm_socdata *socdata)
 	pm_info->mmdc_num = socdata->mmdc_num;
 	mmdc_offset_array = socdata->mmdc_offset;
 
+	gpc_mem_base = pm_info->gpc_base.vbase;
 	for (i = 0; i < pm_info->mmdc_io_num; i++) {
 		pm_info->mmdc_io_val[i][0] =
 			mmdc_io_offset_array[i];
 		pm_info->mmdc_io_val[i][1] =
 			readl_relaxed(pm_info->iomuxc_base.vbase +
 			mmdc_io_offset_array[i]);
-		pm_info->mmdc_io_val[i][2] = 0;
-	}
-
-	/* i.MX6SLL has no DRAM RESET pin */
-	if (cpu_is_imx6sll()) {
-			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 2][2] = 0x1000;
-			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 1][2] = 0x1000;
-	} else {
-		if (pm_info->ddr_type == IMX_DDR_TYPE_LPDDR2) {
-			/* for LPDDR2, CKE0/1 and RESET pin need special setting */
-			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 3][2] = 0x1000;
-			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 2][2] = 0x1000;
-			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 1][2] = 0x80000;
-		}
 	}
 
 	/* initialize MMDC settings */
@@ -1214,18 +1123,6 @@ static int __init imx6q_suspend_init(const struct imx6_pm_socdata *socdata)
 		pm_info->mmdc_val[i][1] =
 			readl_relaxed(pm_info->mmdc0_base.vbase +
 			mmdc_offset_array[i]);
-	}
-
-	if (cpu_is_imx6sll() && pm_info->ddr_type == IMX_MMDC_DDR_TYPE_LPDDR3) {
-		pm_info->mmdc_val[0][1] = 0x8000;
-		pm_info->mmdc_val[2][1] = 0xa1390003;
-		pm_info->mmdc_val[3][1] = 0x400000;
-		pm_info->mmdc_val[4][1] = 0x800;
-		pm_info->mmdc_val[13][1] = 0x800;
-		pm_info->mmdc_val[14][1] = 0x20052;
-		pm_info->mmdc_val[20][1] = 0x201718;
-		pm_info->mmdc_val[21][1] = 0x8000;
-		pm_info->mmdc_val[28][1] = 0xa1310003;
 	}
 
 	/* need to overwrite the value for some mmdc registers */
@@ -1317,23 +1214,6 @@ void __init imx6dl_pm_init(void)
 
 void __init imx6sl_pm_init(void)
 {
-	struct device_node *np;
-	struct regmap *gpr;
-
-	if (cpu_is_imx6sll()) {
-		imx6_pm_common_init(&imx6sll_pm_data);
-		np = of_find_node_by_path(
-			"/soc/aips-bus@02000000/spba-bus@02000000/serial@02020000");
-		if (np)
-			console_base = of_iomap(np, 0);
-		/* i.MX6SLL has bus auto clock gating function */
-		gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-		if (!IS_ERR(gpr))
-			regmap_update_bits(gpr, IOMUXC_GPR5,
-				IOMUXC_GPR5_CLOCK_AFCG_X_BYPASS_MASK, 0);
-		return;
-	}
-
 	imx6_pm_common_init(&imx6sl_pm_data);
 }
 

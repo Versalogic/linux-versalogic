@@ -53,7 +53,6 @@
 			reg = <0>;
 			operating-points = <
 				/* KHz	uV */
-				1200000	1225000
 				996000	1075000
 				792000	975000
 			>;
@@ -97,6 +96,27 @@
 			#clock-cells = <0>;
 			clock-frequency = <24000000>;
 			clock-output-names = "osc";
+		};
+
+	};
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+
+                /* map vol up and vol down key in Android*/
+		volume-up {
+			label = "Volume Up";
+			gpios = <&gpio5 11 1>;
+			gpio-key;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+		volume-down {
+			label = "Volume Down";
+			gpios = <&gpio5 10 1>;
+			gpio-key;
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 
 	};
@@ -628,7 +648,7 @@
 					anatop-min-bit-val = <8>;
 					anatop-min-voltage = <800000>;
 					anatop-max-voltage = <1200000>;
-					anatop-enable-bit = <0>;
+					anatop-enable-bit = <31>;
 				};
 
 				reg_1p2: regulator-vdd1p2@220 {
@@ -1443,6 +1463,10 @@
 			clock-names = "pcie", "pcie_bus", "pcie_phy";
 			pcie-phy-supply = <&reg_1p0d>;
 			status = "disabled";
+		};
+		imx_ion {
+			compatible = "fsl,mxc-ion";
+			fsl,heap-id = <0>;
 		};
 	};
 };
