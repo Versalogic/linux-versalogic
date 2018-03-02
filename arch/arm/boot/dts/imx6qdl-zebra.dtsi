@@ -16,6 +16,7 @@
 / {
 	aliases {
 		mxcfb0 = &mxcfb1;
+		mxcfb1 = &mxcfb2;
 	};
 
 	chosen {
@@ -30,17 +31,12 @@
 			retain-state-suspended;
 		};
 	};
-	memory: memory {
-		reg = <0x10000000 0x80000000>;
-	};
 
         regulators {
 
                 compatible = "simple-bus";
                 #address-cells = <1>;
                 #size-cells = <0>;
-  
-  
   
                 /* MJ: updates 1/31/18, add a 5V regulator for use as vin-supply for USB and HDMI */
                 reg_5v: regulator@0{
@@ -75,6 +71,7 @@
                         vin-supply = <&reg_5v>;
                 };
  
+/*
                 reg_3p3v: regulator@4 {
                         compatible = "regulator-fixed";
                         reg = <4>;
@@ -83,6 +80,7 @@
                         regulator-max-microvolt = <3300000>;
                         regulator-always-on;
                 };
+*/
 
                 reg_hdmi: regulator@5 {
                         compatible = "regulator-fixed";
@@ -93,23 +91,6 @@
                         enable-active-high;
                         hdmi-5v-supply = <&reg_5v>;
                 };
-	};
-
-
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
-
-		/* Added for Tetra -- wake up signal support? */
-/*
-		pcie-wake {
-			label = "PCIe Wake";
-			gpios = <&gpio3 26 GPIO_ACTIVE_LOW>; 
-			gpio-key,wakeup;
-*/
-		/*	linux,code = <KEY_PCIEWAKE>; */
-		/*};*/
 	};
 
         sound {
@@ -132,8 +113,19 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	/* HDMI video settings */
-	mxcfb1: fb@1 {
+        /* 18-bit LVDS (RGB666) */
+        mxcfb1: fb@0 {
+                compatible = "fsl,mxc_sdc_fb";
+                disp_dev = "ldb";
+                interface_pix_fmt = "RGB666";
+                default_bpp = <16>;  /* why not 18 - 6+6+6? */
+                int_clk = <0>;
+                late_init = <0>;
+                status = "disabled";
+        };
+
+        /* HDMI video settings */
+        mxcfb2: fb@1 {
                 compatible = "fsl,mxc_sdc_fb";
                 disp_dev = "hdmi";
                 interface_pix_fmt = "RGB24";
@@ -182,7 +174,7 @@
         };
 };
 
-&ecspi1 {
+&ecspi2 {
         fsl,spi-num-chipselects = <1>;
         cs-gpios = <
                 &gpio2 26 GPIO_ACTIVE_LOW
@@ -206,18 +198,18 @@
         status = "okay";
 
         spi3dev0: spi@0 {
-                compatible = "bosch,bmp085";
+                compatible = "bosch,bme280";
                 reg = <0>;
                 spi-max-frequency = <5000000>;
         };
 
         spi3dev1: spi@1 {
-                compatible = "bosch,bmp085";
+                compatible = "bosch,bme280";
                 reg = <1>;
                 spi-max-frequency = <5000000>;
         };
         spi3dev2: spi@2 {
-                compatible = "bosch,bmp085";
+                compatible = "bosch,bme280";
                 reg = <2>;
                 spi-max-frequency = <5000000>;
         };
@@ -305,6 +297,12 @@
                 wakeup-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
                 linux,wakeup;
         };
+
+        bme280@77 {
+                compatible = "bosch,bme280";
+                reg = <0x77>;
+        };
+
 };
 
 &i2c2 {
@@ -312,6 +310,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+        bme280@77 {
+                compatible = "bosch,bme280";
+                reg = <0x77>;
+        };
+
 };
 
 &i2c3 {
@@ -396,8 +400,10 @@
                 vgen1_reg: vgen1 {
                      regulator-min-microvolt = <1500000>;
                      regulator-max-microvolt = <1500000>;
+/*
                      regulator-boot-on;
                      regulator-always-on;
+*/
 				
 				/* Suspend-to-RAM allows for turning off ??? */
 				/*regulator-state-mem {
@@ -466,11 +472,12 @@
         };
 
 };
-
+/*
 &clks {
 	fsl,ldb-di0-parent = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
 	fsl,ldb-di1-parent = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
 };
+*/
 
 &can1 {
         pinctrl-names = "default";
@@ -689,13 +696,6 @@
 			>;
 		};
 
-		pinctrl_gpio_keys: gpio_keysgrp {
-			fsl,pins = <
-                                /* PCIe_WAKE# input, pull-up (off by default) - moved to gpio-keys */
-                                MX6QDL_PAD_EIM_D26__GPIO3_IO26             0x0001B0B0
-			>;
-		};
-
 		pinctrl_hdmi_cec: hdmicecgrp {
 			fsl,pins = <
 				MX6QDL_PAD_KEY_ROW2__HDMI_TX_CEC_LINE      0x00010898
@@ -805,7 +805,7 @@
 
 &mipi_dsi {
 
-	status = "disable";
+	status = "disabled";
 
 };
 
@@ -830,7 +830,7 @@
        vin-supply = <&sw1c_reg>;
 };
 &snvs_poweroff {
-	status = "okay"; /* set to "disable"; to disable PMIC control from iMX6 */
+	status = "okay"; /* set to disable to disable PMIC control from iMX6 */
 };
 
 
@@ -932,4 +932,33 @@
 	fsl,ext-reset-output; /* MJ:  maybe this enables the pin output? */
 	status = "disabled";
 };
+
+&weim {
+ 	status = "disabled";
+ };
+&epdc {
+ 	status = "disabled";
+ };
+&pcie {
+ 	status = "disabled";
+ };
+&uart4 {
+	status = "disabled";
+};
+&uart5 {
+	status = "disabled";
+};
+&spdif {
+	status = "disabled";
+};
+&gpmi {
+	status = "disabled";
+};
+&usdhc1 {
+	status = "disabled";
+};
+&usdhc3 {
+	status = "disabled";
+};
+
 
