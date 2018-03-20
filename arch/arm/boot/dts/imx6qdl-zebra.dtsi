@@ -38,6 +38,7 @@
                 #address-cells = <1>;
                 #size-cells = <0>;
   
+  
                 /* MJ: updates 1/31/18, add a 5V regulator for use as vin-supply for USB and HDMI */
                 reg_5v: regulator@0{
                         compatible = "regulator-fixed";
@@ -71,17 +72,6 @@
                         vin-supply = <&reg_5v>;
                 };
  
-/*
-                reg_3p3v: regulator@4 {
-                        compatible = "regulator-fixed";
-                        reg = <4>;
-                        regulator-name = "3P3V";
-                        regulator-min-microvolt = <3300000>;
-                        regulator-max-microvolt = <3300000>;
-                        regulator-always-on;
-                };
-*/
-
                 reg_hdmi: regulator@5 {
                         compatible = "regulator-fixed";
                         reg = <5>;
@@ -183,6 +173,12 @@
         pinctrl-0 = <&pinctrl_ecspi2 &pinctrl_ecspi2_cs>;
         status = "okay";
 
+	/* test board device */
+	spi2dev0: spi@0 {
+                compatible = "bosch,bme280";
+                reg = <0>;
+                spi-max-frequency = <5000000>;
+        };
 };
 
 &ecspi3 {
@@ -197,6 +193,7 @@
         pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
         status = "okay";
 
+	/* test board devices */ 
         spi3dev0: spi@0 {
                 compatible = "bosch,bme280";
                 reg = <0>;
@@ -278,7 +275,7 @@
 &hdmi_video {
 	fsl,phy_reg_vlev = <0x0294>;
 	fsl,phy_reg_cksymtx = <0x800d>;
-	HDMI-supply = <&reg_hdmi>; /* 3.3V */
+	HDMI-supply = <&reg_hdmi>; /* 5V */
 	status = "okay";
 };
 
@@ -298,11 +295,11 @@
                 linux,wakeup;
         };
 
+	/* test board device */
         bme280@77 {
                 compatible = "bosch,bme280";
                 reg = <0x77>;
         };
-
 };
 
 &i2c2 {
@@ -311,6 +308,7 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
+	/* test board device */
         bme280@77 {
                 compatible = "bosch,bme280";
                 reg = <0x77>;
@@ -332,7 +330,7 @@
 
                 /* SW1AB = V1P375_CORE, sequence #2 */
                 sw1a_reg: sw1ab {
-                     regulator-min-microvolt = <1375000>;
+                     regulator-min-microvolt = <0900000>;
                      regulator-max-microvolt = <1375000>;
                      regulator-boot-on;
                      regulator-always-on;
@@ -340,7 +338,7 @@
 
                 /* SW1C = V1P375_SOC, sequence #3 */
                 sw1c_reg: sw1c {
-                     regulator-min-microvolt = <1375000>;
+                     regulator-min-microvolt = <0900000>;
                      regulator-max-microvolt = <1375000>;
                      regulator-boot-on;
                      regulator-always-on;
@@ -400,10 +398,8 @@
                 vgen1_reg: vgen1 {
                      regulator-min-microvolt = <1500000>;
                      regulator-max-microvolt = <1500000>;
-/*
-                     regulator-boot-on;
-                     regulator-always-on;
-*/
+                     /*regulator-boot-on;*/
+                     /*regulator-always-on;*/
 				
 				/* Suspend-to-RAM allows for turning off ??? */
 				/*regulator-state-mem {
@@ -498,9 +494,102 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 	
-	imx6qdl-tetra {
+	imx6qdl-zebra {
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
+				/* UNUSED PINS -- set drivers = Hi-z and disable pull res */
+				/* if have issues, set only 100k pull-up, assign 0x0000B000 */
+				MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x00000000
+				MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x00000000
+				MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x00000000
+				MX6QDL_PAD_CSI0_DAT15__GPIO6_IO01	0x00000000
+				MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02	0x00000000
+				MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03	0x00000000
+				MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x00000000
+				MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05	0x00000000
+				MX6QDL_PAD_CSI0_DAT4__GPIO5_IO22	0x00000000
+				MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23	0x00000000
+				MX6QDL_PAD_CSI0_DAT6__GPIO5_IO24	0x00000000
+				MX6QDL_PAD_CSI0_DAT7__GPIO5_IO25	0x00000000
+				MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26	0x00000000
+				MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27	0x00000000
+				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x00000000
+				MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19	0x00000000
+				MX6QDL_PAD_CSI0_VSYNC__GPIO5_IO21	0x00000000
+				MX6QDL_PAD_DI0_DISP_CLK__GPIO4_IO16	0x00000000
+				MX6QDL_PAD_DI0_PIN15__GPIO4_IO17	0x00000000
+				MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x00000000
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x00000000
+				MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05	0x00000000
+				MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x00000000
+				MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x00000000
+				MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10	0x00000000
+				MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x00000000
+				MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x00000000
+				MX6QDL_PAD_DISP0_DAT19__GPIO5_IO13	0x00000000
+				MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14	0x00000000
+				MX6QDL_PAD_DISP0_DAT21__GPIO5_IO15	0x00000000
+				MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16	0x00000000
+				MX6QDL_PAD_DISP0_DAT23__GPIO5_IO17	0x00000000
+				MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x00000000
+				MX6QDL_PAD_DISP0_DAT7__GPIO4_IO28	0x00000000
+				MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x00000000
+				MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x00000000
+				MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x00000000
+				MX6QDL_PAD_EIM_A19__GPIO2_IO19		0x00000000
+				MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x00000000
+				MX6QDL_PAD_EIM_A21__GPIO2_IO17		0x00000000
+				MX6QDL_PAD_EIM_A22__GPIO2_IO16		0x00000000
+				MX6QDL_PAD_EIM_A23__GPIO6_IO06		0x00000000
+				MX6QDL_PAD_EIM_A24__GPIO5_IO04		0x00000000
+				MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0x00000000
+				MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x00000000
+				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x00000000
+				MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x00000000
+				MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x00000000
+				MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x00000000
+				MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x00000000
+				MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x00000000
+				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x00000000
+				MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x00000000
+				MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x00000000
+				MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x00000000
+				MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x00000000
+				MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x00000000
+				MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x00000000
+				MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x00000000
+				MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x00000000
+				MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x00000000
+				MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x00000000
+				MX6QDL_PAD_EIM_EB0__GPIO2_IO28		0x00000000
+				MX6QDL_PAD_EIM_EB1__GPIO2_IO29		0x00000000
+				MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x00000000
+				MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x00000000
+				MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x00000000
+				MX6QDL_PAD_ENET_RX_ER__GPIO1_IO24	0x00000000
+				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x00000000
+				MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x00000000
+				MX6QDL_PAD_ENET_TXD1__GPIO1_IO29	0x00000000
+				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x00000000
+				MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x00000000
+				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x00000000
+				MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x00000000
+				MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x00000000
+				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x00000000
+				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x00000000
+				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x00000000
+				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x00000000
+				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x00000000
+				MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x00000000
+				MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x00000000
+				MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x00000000
+				MX6QDL_PAD_NANDF_RB0__GPIO6_IO10	0x00000000
+				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x00000000
+				MX6QDL_PAD_SD3_DAT3__GPIO7_IO07		0x00000000
+				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x00000000
+				MX6QDL_PAD_SD3_DAT6__GPIO6_IO18		0x00000000
+				MX6QDL_PAD_SD3_DAT7__GPIO6_IO17		0x00000000
+				
                                 /* Programmable LED output for User I/O */
 				MX6QDL_PAD_NANDF_D0__GPIO2_IO00            0x0001B018
   
@@ -514,8 +603,11 @@
 				MX6QDL_PAD_DI0_PIN2__GPIO4_IO18            0x0001B0B0
                                 /* PMIC_INT# input (pull-up = off by default) */
 				MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06         0x0001B0B0
-                                /* USB_HUB_RST# out (pull-up = off by default) */
-				MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16         0x0001B030
+
+                                /* was USB_HUB_RST# out for Tetra, NC for Zebra */
+				/* 0x00003000 assignment is only pull-down enabled */
+				MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16         0x00003000
+
                                 /* SOC_RSTOUT# out (pull-up = off by default) */
  				MX6QDL_PAD_EIM_A25__GPIO5_IO02             0x0001B030
                                 /* LVDS signals */                          
@@ -563,6 +655,11 @@
                                 /* GP_IRQ#, set as open drain (might have mult. drivers) */
                                 MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09         0x0001B818 
 
+				/* MIKRO_GPIO, pull-up */
+				MX6QDL_PAD_SD3_DAT2__GPIO7_IO06            0x0001b098
+
+				/* Add assignments for unused pins to make sure they aren't being defaulted with
+				 * pull-ups or anything that would draw more power */
 				MX6QDL_PAD_SD3_DAT2__GPIO7_IO06            0x00012018
 
 			>;
@@ -572,6 +669,12 @@
 			fsl,pins = <
 				MX6QDL_PAD_SD3_CLK__FLEXCAN1_RX            0x0001B098
 				MX6QDL_PAD_SD3_CMD__FLEXCAN1_TX            0x0001B098
+				/* currently unused CAN transceiver control signals */
+                                /* set to 100k pull-down, 90 Ohm, low spd, slow slew */ 
+                                /* FLEXCAN1_STBY */ 
+				MX6QDL_PAD_SD3_RST__GPIO7_IO08             0x00013018
+                                /* FLEXCAN1_CTRL */
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06            0x00013018
 			>;
 		};
 
@@ -704,10 +807,8 @@
 
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
-				/* LVDS_PWMO: Fast slew, 90 Ohm, Medium speed settings */
+				/* MIKRO_PWMO: Fast slew, 90 Ohm, Medium speed settings */
 				MX6QDL_PAD_SD1_DAT3__PWM1_OUT              0x0001B099 
-				/* LVDS_BKLTEN: Pull-down, Slow slew, 90 Ohm, Low spd settings */
-				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15           0x00013018 
 			>;
 		};
 
@@ -744,10 +845,13 @@
 			>;
 		};
 
+		/* MJ: need to set these up for DTE mode matching, imx6dl-pinfunc.h naming convention info sets 
+		 * up the IOMUXC_UART2_UART_RX_DATA_SELECT_INPUT accordingly when named this way, so all that
+		 * is left is to set this UART in DTE mode */
                 pinctrl_uart2: uart2grp {
                         fsl,pins = <
-                                MX6QDL_PAD_EIM_D26__UART2_TX_DATA          0x0001B018
-                                MX6QDL_PAD_EIM_D27__UART2_RX_DATA          0x0001B018
+                                MX6QDL_PAD_EIM_D26__UART2_RX_DATA          0x0001B018  /* input for DTE mode */
+                                MX6QDL_PAD_EIM_D27__UART2_TX_DATA          0x0001B018  /* output for DTE mode */
 
                         >;
                 };
@@ -803,6 +907,11 @@
 
 };
 
+&mipi_csi {
+
+	status = "disabled";
+
+};
 &mipi_dsi {
 
 	status = "disabled";
@@ -897,6 +1006,42 @@
      tx-d-cal = <0x7>;
 };
 
+/* Maybe explicitly disabling these unused blocks will lower power 
+(I don’t know that I have all the names correct…)? */
+&weim {
+ 	status = "disabled";
+ };
+&epdc {
+ 	status = "disabled";
+ };
+&lcd {
+ 	status = "disabled";
+ };
+&sata {
+ 	status = "disabled";
+ };
+&pcie {
+ 	status = "disabled";
+ };
+&uart4 {
+	status = "disabled";
+};
+&uart5 {
+	status = "disabled";
+};
+&spdif {
+	status = "disabled";
+};
+&gpmi {
+	status = "disabled";
+};
+&usdhc1 {
+	status = "disabled";
+};
+&usdhc3 {
+	status = "disabled";
+};
+
 &usdhc2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
@@ -922,42 +1067,17 @@
 &wdog1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,wdog_b;
+        /* MJ: I think the driver needs to know whether to set the internal or external wdog_b */
+	fsl,wdog_b; /* MJ: I think this enables the "software" reset aka "internal" reset wdog_b signal */
+	/*fsl,ext-reset-output; *//* MJ: I think this enables the "external" reset pad wdog_b */
 	status = "okay";
 };
 
+/* MJ: Comment out pinctrl too - I think wdog2 is for TZ only */
 &wdog2 {
-        pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,ext-reset-output; /* MJ:  maybe this enables the pin output? */
-	status = "disabled";
-};
-
-&weim {
- 	status = "disabled";
- };
-&epdc {
- 	status = "disabled";
- };
-&pcie {
- 	status = "disabled";
- };
-&uart4 {
-	status = "disabled";
-};
-&uart5 {
-	status = "disabled";
-};
-&spdif {
-	status = "disabled";
-};
-&gpmi {
-	status = "disabled";
-};
-&usdhc1 {
-	status = "disabled";
-};
-&usdhc3 {
+        /*pinctrl-names = "default";*/
+	/*pinctrl-0 = <&pinctrl_wdog>;*/
+	/*fsl,ext-reset-output; */ /* MJ: I think this enables the "external" reset pad wdog_b */
 	status = "disabled";
 };
 
