@@ -16,7 +16,6 @@
 / {
 	aliases {
 		mxcfb0 = &mxcfb1;
-		mxcfb1 = &mxcfb2;
 	};
 
 	chosen {
@@ -103,19 +102,8 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-        /* 18-bit LVDS (RGB666) */
-        mxcfb1: fb@0 {
-                compatible = "fsl,mxc_sdc_fb";
-                disp_dev = "ldb";
-                interface_pix_fmt = "RGB666";
-                default_bpp = <16>;  /* why not 18 - 6+6+6? */
-                int_clk = <0>;
-                late_init = <0>;
-                status = "disabled";
-        };
-
         /* HDMI video settings */
-        mxcfb2: fb@1 {
+        mxcfb1: fb@0 {
                 compatible = "fsl,mxc_sdc_fb";
                 disp_dev = "hdmi";
                 interface_pix_fmt = "RGB24";
@@ -123,7 +111,7 @@
                 default_bpp = <24>;
                 int_clk = <0>;
                 late_init = <0>;
-                status = "disabled";
+                status = "okay";
         };
 
 	v4l2_out {
@@ -330,7 +318,7 @@
 
                 /* SW1AB = V1P375_CORE, sequence #2 */
                 sw1a_reg: sw1ab {
-                     regulator-min-microvolt = <0900000>;
+                     regulator-min-microvolt = <900000>;
                      regulator-max-microvolt = <1375000>;
                      regulator-boot-on;
                      regulator-always-on;
@@ -338,7 +326,7 @@
 
                 /* SW1C = V1P375_SOC, sequence #3 */
                 sw1c_reg: sw1c {
-                     regulator-min-microvolt = <0900000>;
+                     regulator-min-microvolt = <900000>;
                      regulator-max-microvolt = <1375000>;
                      regulator-boot-on;
                      regulator-always-on;
@@ -468,12 +456,6 @@
         };
 
 };
-/*
-&clks {
-	fsl,ldb-di0-parent = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
-	fsl,ldb-di1-parent = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
-};
-*/
 
 &can1 {
         pinctrl-names = "default";
@@ -1012,12 +994,6 @@
  	status = "disabled";
  };
 &epdc {
- 	status = "disabled";
- };
-&lcd {
- 	status = "disabled";
- };
-&sata {
  	status = "disabled";
  };
 &pcie {

@@ -16,7 +16,3 @@
 	compatible = "fsl,imx6dl-zebra", "fsl,imx6dl";
 };
 
-&mxcfb1 {
-        status = "okay";
-};
-
