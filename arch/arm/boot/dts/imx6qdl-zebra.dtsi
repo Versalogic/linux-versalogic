@@ -162,13 +162,15 @@
         status = "okay";
 
 	/* test board device */
+/*
         mrf24j40ma@0 {
                 compatible = "microchip,mrf24j40ma";
-                spi-max-frequency = <8500000>;
+                spi-max-frequency = <500000>;
                 reg = <0>;
-                interrupts = <9 8>;
                 interrupt-parent = <&gpio5>;
+                interrupts = <9 8>;
         };
+*/
 };
 
 &ecspi3 {
@@ -265,16 +267,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
-
-	/* MJ - Touchscreen control should use I2C1 bus, updated GPIO pin info */
-        polytouch1: eeti@04 {
-                compatible = "eeti,egalax_ts";
-                reg = <0x04>; /* I2C 7-bit address */
-                interrupt-parent = <&gpio5>;
-                interrupts = <9 2>;
-                wakeup-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
-                linux,wakeup;
-        };
 
 	/* test board device */
         bme280@77 {
@@ -437,11 +429,12 @@
                 VDDIO-supply = <&sw2_reg>;
                 VDDD-supply = <&vgen3_reg>;
         };
-
+/* Uncomment if board has acclerometer
         fxos8700@1c {
                 compatible = "fsl,fxos8700";
                 reg = <0x1c>;
         };
+*/
 
         hdmi_edid: edid@50 {
                 compatible = "fsl,imx6-hdmi-i2c";
@@ -628,7 +621,7 @@
                                 MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09         0x0001B818 
 
 				/* MIKRO_GPIO, pull-up (was CSI_GPIO0 with pull-down on Tetra) */
-				MX6QDL_PAD_SD3_DAT2__GPIO7_IO06            0x0001B098
+				MX6QDL_PAD_SD3_DAT2__GPIO7_IO06 0x00013098 /* noted as IO1 on Zebra mikroBUS, default to GPIO with pull-down */
 
 			>;
 		};
@@ -764,6 +757,7 @@
 				/* RGMII_INT# and RGMII_INT#_STATUS inputs respectively (GPIO)*/
                                 MX6QDL_PAD_ENET_RXD1__GPIO1_IO26           0x0001B0B0
                                 MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28          0x0001B0B0
+				MX6QDL_PAD_SD1_DAT3__GPIO1_IO21            0x000130A9
 			>;
 		};
 
@@ -776,7 +770,7 @@
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
 				/* MIKRO_PWMO: Fast slew, 90 Ohm, Medium speed settings */
-				MX6QDL_PAD_SD1_DAT3__PWM1_OUT              0x0001B099 
+				/*MX6QDL_PAD_SD1_DAT3__PWM1_OUT              0x0001B099 */
 			>;
 		};
 
@@ -886,13 +880,13 @@
 
 };
 
+/* Set pwm to okay if enabled in pin mux settings */
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
+	status = "disabled";
 };
 
-/* Set pwm to okay if enabled in pin mux settings */
 &pwm2 {
         status = "disabled";
 };

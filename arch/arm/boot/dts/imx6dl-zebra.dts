@@ -12,7 +12,7 @@
 #include "imx6qdl-zebra.dtsi"
 
 / {
-	model = "Freescale i.MX6 DualLite - Versalogic Tetra";
+	model = "Freescale i.MX6 DualLite - Versalogic Zebra";
 	compatible = "fsl,imx6dl-zebra", "fsl,imx6dl";
 };
 
