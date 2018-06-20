@@ -16,6 +16,7 @@
 / {
 	aliases {
 		mxcfb0 = &mxcfb1;
+                mxcfb1 = &mxcfb2;
 	};
 
 	chosen {
@@ -102,8 +103,18 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-        /* HDMI video settings */
         mxcfb1: fb@0 {
+                compatible = "fsl,mxc_sdc_fb";
+                disp_dev = "ldb";
+                interface_pix_fmt = "RGB666";
+                default_bpp = <16>;
+                int_clk = <0>;
+                late_init = <0>;
+                status = "okay";
+        };
+
+        /* HDMI video settings */
+        mxcfb2: fb@1 {
                 compatible = "fsl,mxc_sdc_fb";
                 disp_dev = "hdmi";
                 interface_pix_fmt = "RGB24";
@@ -143,10 +154,10 @@
         pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs>;
         status = "okay";
 
-        flash: 25fl016ki@0 {
+        flash0: w25x16@0 {
                 #address-cells = <1>;
                 #size-cells = <1>;
-                compatible = "spansion,s25fl016k";
+                compatible = "w25x16", "jedec,spi-nor";
                 spi-max-frequency = <20000000>;
                 reg = <0>;
         };
@@ -435,6 +446,10 @@
                 reg = <0x1c>;
         };
 */
+        lsm303d@1e {
+                compatible = "st,lsm303d";
+                reg = <0x1e>;
+        };
 
         hdmi_edid: edid@50 {
                 compatible = "fsl,imx6-hdmi-i2c";
