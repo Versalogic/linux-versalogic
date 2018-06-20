@@ -95,7 +95,7 @@ ifeq ($(feature-all), 1)
   #
   $(foreach feat,$(FEATURE_TESTS),$(call feature_set,$(feat)))
 else
-  $(shell $(MAKE) OUTPUT=$(OUTPUT_FEATURES) CC="$(CC)" CFLAGS="$(EXTRA_CFLAGS)" LDFLAGS=$(LDFLAGS) -i -j -C $(feature_dir) $(addsuffix .bin,$(FEATURE_TESTS)) >/dev/null 2>&1)
+  $(shell $(MAKE) OUTPUT=$(OUTPUT_FEATURES) CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CC="$(CC)" CFLAGS="$(EXTRA_CFLAGS)" LDFLAGS=$(LDFLAGS) -i -j -C $(feature_dir) $(addsuffix .bin,$(FEATURE_TESTS)) >/dev/null 2>&1)
   $(foreach feat,$(FEATURE_TESTS),$(call feature_check,$(feat)))
 endif
 
