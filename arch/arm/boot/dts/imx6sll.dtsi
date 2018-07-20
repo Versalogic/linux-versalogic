@@ -1,6 +1,6 @@
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
- * Copyright 2017 NXP.
+ * Copyright 2017-2018 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -58,7 +58,7 @@
 			>;
 			fsl,soc-operating-points = <
 				/* ARM kHz      SOC-PU uV */
-				996000          1275000
+				996000          1175000
 				792000          1175000
 				396000          1175000
 				198000		1175000
@@ -167,6 +167,12 @@
 			reg = <0x00905000 0x1B000>;
 		};
 
+		ocram_optee: sram@00918000 {
+			compatible = "fsl,optee-lpm-sram";
+			reg = <0x00918000 0x8000>;
+			overw_reg = <&ocram 0x00905000 0x13000>;
+		};
+
 		L2: l2-cache@00a02000 {
 			compatible = "arm,pl310-cache";
 			reg = <0x00a02000 0x1000>;
@@ -211,7 +217,7 @@
 						      "rxtx1", "rxtx2",
 						      "rxtx3", "rxtx4",
 						      "rxtx5", "rxtx6",
-						      "rxtx7", "dma";
+						      "rxtx7", "spba";
 					status = "disabled";
 				};
 
@@ -574,7 +580,7 @@
 					regmap = <&snvs>;
 					interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
 					linux,keycode = <KEY_POWER>;
-					wakeup;
+					wakeup-source;
 				};
 			};
 
@@ -679,7 +685,7 @@
 					     <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SLL_CLK_DCP>;
 				clock-names = "dcp";
-			}; 
+			};
 		};
 
 		aips2: aips-bus@02100000 {

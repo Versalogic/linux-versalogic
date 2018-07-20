@@ -19,6 +19,7 @@
 #include <linux/of_device.h>
 #include <linux/of_fdt.h>
 #include <linux/of_irq.h>
+#include <linux/psci.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
 #include <linux/genalloc.h>
@@ -36,6 +37,8 @@
 #include <asm/proc-fns.h>
 #include <asm/suspend.h>
 #include <asm/tlb.h>
+
+#include <uapi/linux/psci.h>
 
 #include "common.h"
 #include "hardware.h"
@@ -261,11 +264,10 @@ static const u32 imx7d_ddrc_phy_lpddr3_setting[][2] __initconst = {
 	{ 0x30, READ_DATA_FROM_HARDWARE },
 	{ 0x50, 0x01000008 },
 	{ 0x50, 0x00000008 },
-	{ 0xc0, 0x0e407304 },
-	{ 0xc0, 0x0e447304 },
-	{ 0xc0, 0x0e447306 },
+	{ 0xc0, 0x0e487304 },
 	{ 0xc0, 0x0e4c7304 },
-	{ 0xc0, 0x0e487306 },
+	{ 0xc0, 0x0e4c7306 },
+	{ 0xc0, 0x0e487304 },
 };
 
 static const u32 imx7d_ddrc_ddr3_setting[][2] __initconst = {
@@ -293,6 +295,7 @@ static const u32 imx7d_ddrc_ddr3_setting[][2] __initconst = {
 	{ 0x194, READ_DATA_FROM_HARDWARE },
 	{ 0x200, READ_DATA_FROM_HARDWARE },
 	{ 0x204, READ_DATA_FROM_HARDWARE },
+	{ 0x210, READ_DATA_FROM_HARDWARE },
 	{ 0x214, READ_DATA_FROM_HARDWARE },
 	{ 0x218, READ_DATA_FROM_HARDWARE },
 	{ 0x240, READ_DATA_FROM_HARDWARE },
@@ -317,8 +320,7 @@ static const u32 imx7d_ddrc_phy_ddr3_setting[][2] __initconst = {
 	{ 0xc0, 0x0e407304 },
 	{ 0xc0, 0x0e447304 },
 	{ 0xc0, 0x0e447306 },
-	{ 0xc0, 0x0e447304 },
-	{ 0xc0, 0x0e407306 },
+	{ 0xc0, 0x0e407304 },
 };
 
 static const struct imx7_pm_socdata imx7d_pm_data_lpddr3 __initconst = {
@@ -667,8 +669,29 @@ static void imx7_console_io_restore(void)
 	writel_relaxed(uart1_io[3], iomuxc_base + UART_TX_PAD);
 }
 
+#define MX7D_SUSPEND_POWERDWN_PARAM	\
+	((0 << PSCI_0_2_POWER_STATE_ID_SHIFT) | \
+	 (1 << PSCI_0_2_POWER_STATE_AFFL_SHIFT) | \
+	 (PSCI_POWER_STATE_TYPE_POWER_DOWN << PSCI_0_2_POWER_STATE_TYPE_SHIFT))
+
+#define MX7D_SUSPEND_STANDBY_PARAM	\
+	((0 << PSCI_0_2_POWER_STATE_ID_SHIFT) | \
+	 (1 << PSCI_0_2_POWER_STATE_AFFL_SHIFT) | \
+	 (PSCI_POWER_STATE_TYPE_STANDBY << PSCI_0_2_POWER_STATE_TYPE_SHIFT))
+
 static int imx7_suspend_finish(unsigned long val)
 {
+	u32 state;
+
+	if (val == 0)
+		state = MX7D_SUSPEND_POWERDWN_PARAM;
+	else
+		state = MX7D_SUSPEND_STANDBY_PARAM;
+
+	if (psci_ops.cpu_suspend) {
+		return psci_ops.cpu_suspend(state, __pa(cpu_resume));
+	}
+
 	if (!imx7_suspend_in_ocram_fn) {
 		cpu_do_idle();
 	} else {
@@ -727,7 +750,10 @@ static int imx7_pm_enter(suspend_state_t state)
 		imx_gpcv2_pre_suspend(false);
 
 		/* Zzz ... */
-		imx7_suspend_in_ocram_fn(suspend_ocram_base);
+		if (psci_ops.cpu_suspend)
+			cpu_suspend(1, imx7_suspend_finish);
+		else
+			imx7_suspend_in_ocram_fn(suspend_ocram_base);
 
 		imx_anatop_post_resume();
 		imx_gpcv2_post_resume();
@@ -887,6 +913,7 @@ void __init imx7_pm_map_io(void)
 		return;
 	}
 
+	/* TODO: Handle M4 in TEE? */
 	/* Set all entries to 0 except first 3 words reserved for M4. */
 	memset((void *)(iram_tlb_base_addr + M4_OCRAMS_RESERVED_SIZE),
 		0, MX7_IRAM_TLB_SIZE - M4_OCRAMS_RESERVED_SIZE);
@@ -975,7 +1002,13 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 	/* Get the virtual address of the suspend code. */
 	suspend_ocram_base = (void *)IMX_IO_P2V(iram_paddr);
 
-	pm_info = suspend_ocram_base;
+	if (psci_ops.cpu_suspend) {
+		pm_info = kmalloc(sizeof(*pm_info), GFP_KERNEL);
+		if (!pm_info)
+			return -ENOMEM;
+	} else {
+		pm_info = suspend_ocram_base;
+	}
 	/* pbase points to iram_paddr. */
 	pm_info->pbase = iram_paddr;
 	pm_info->resume_addr = virt_to_phys(ca7_cpu_resume);
@@ -1058,6 +1091,9 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 				ddrc_phy_offset_array[i][1];
 	}
 
+	if (psci_ops.cpu_suspend)
+		goto put_node;
+
 	imx7_suspend_in_ocram_fn = fncpy(
 		suspend_ocram_base + sizeof(*pm_info),
 		&imx7_suspend,
@@ -1124,6 +1160,9 @@ void __init imx7d_pm_init(void)
 	if (of_get_property(np, "fsl,enable-lpsr", NULL))
 		lpsr_enabled = true;
 
+	if (psci_ops.cpu_suspend)
+		lpsr_enabled = false;
+
 	if (lpsr_enabled) {
 		pr_info("LPSR mode enabled, DSM will go into LPSR mode!\n");
 		lpm_ocram_base = of_iomap(np, 0);
@@ -1179,7 +1218,7 @@ void __init imx7d_pm_init(void)
 	WARN_ON(!ocram_saved_in_ddr);
 
 	np = of_find_node_by_path(
-		"/soc/aips-bus@30800000/spba-bus@30800000/serial@30860000");
+		"/soc/aips-bus@30800000/serial@30860000");
 	if (np)
 		console_base = of_iomap(np, 0);
 

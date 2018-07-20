@@ -1,6 +1,6 @@
 /*
  * Copyright 2015-2016 Freescale Semiconductor, Inc.
- * Copyright 2017 NXP.
+ * Copyright 2017-2018 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -58,7 +58,7 @@
 			clock-latency = <61036>; /* two CLK32 periods */
 			operating-points = <
 				/* kHz	uV */
-				996000	1275000
+				900000	1275000
 				792000	1225000
 				528000	1175000
 				396000	1025000
@@ -66,7 +66,7 @@
 			>;
 			fsl,soc-operating-points = <
 				/* KHz	uV */
-				996000	1175000
+				900000	1175000
 				792000	1175000
 				528000	1175000
 				396000	1175000
@@ -86,6 +86,8 @@
 				 <&clks IMX6UL_CLK_OSC>;
 			clock-names = "arm", "pll2_bus",  "pll2_pfd2_396m", "secondary_sel", "step",
 				      "pll1_sw", "pll1_sys", "pll1_bypass", "pll1", "pll1_bypass_src", "osc";
+			arm-supply = <&reg_arm>;
+			soc-supply = <&reg_soc>;
 		};
 	};
 
@@ -182,6 +184,12 @@
 			reg = <0x00905000 0x1B000>;
 		};
 
+		ocram_optee: sram@00918000 {
+			compatible = "fsl,optee-lpm-sram";
+			reg = <0x00918000 0x8000>;
+			overw_reg = <&ocram 0x00905000 0x13000>;
+		};
+
 		dma_apbh: dma-apbh@01804000 {
 			compatible = "fsl,imx6ul-dma-apbh", "fsl,imx28-dma-apbh";
 			reg = <0x01804000 0x2000>;
@@ -247,7 +255,7 @@
 						      "rxtx1", "rxtx2",
 						      "rxtx3", "rxtx4",
 						      "rxtx5", "rxtx6",
-						      "rxtx7", "dma";
+						      "rxtx7", "spba";
 					status = "disabled";
 				};
 
@@ -341,7 +349,7 @@
 						 <&clks IMX6UL_CLK_ESAI_IPG>,
 						 <&clks IMX6UL_CLK_SPBA>;
 					clock-names = "core", "mem", "extal",
-						      "fsys", "dma";
+						      "fsys", "spba";
 					dmas = <&sdma 0 21 0>, <&sdma 47 21 0>;
 					dma-names = "rx", "tx";
 					dma-source = <&gpr 0 14 0 15>;
@@ -408,7 +416,7 @@
 						"asrck_1", "asrck_2", "asrck_3", "asrck_4",
 						"asrck_5", "asrck_6", "asrck_7", "asrck_8",
 						"asrck_9", "asrck_a", "asrck_b", "asrck_c",
-						"asrck_d", "asrck_e", "asrck_f", "dma";
+						"asrck_d", "asrck_e", "asrck_f", "spba";
 					dmas = <&sdma 17 23 1>, <&sdma 18 23 1>, <&sdma 19 23 1>,
 						<&sdma 20 23 1>, <&sdma 21 23 1>, <&sdma 22 23 1>;
 					dma-names = "rxa", "rxb", "rxc",
@@ -721,7 +729,7 @@
 					regmap = <&snvs>;
 					interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
 					linux,keycode = <KEY_POWER>;
-					wakeup;
+					wakeup-source;
 				};
 			};
 

@@ -1,5 +1,5 @@
 include ../../scripts/Makefile.include
-include ../config/utilities.mak
+include ../../scripts/utilities.mak
 
 MAN1_TXT= \
 	$(filter-out $(addsuffix .txt, $(ARTICLES) $(SP_ARTICLES)), \
@@ -41,7 +41,7 @@ endif
 bindir?=$(prefix)/bin
 htmldir?=$(prefix)/share/doc/perf-doc
 pdfdir?=$(prefix)/share/doc/perf-doc
-mandir?=$(prefix)/share/man
+mandir:=$(prefix)/share/man
 man1dir=$(mandir)/man1
 man5dir=$(mandir)/man5
 man7dir=$(mandir)/man7
