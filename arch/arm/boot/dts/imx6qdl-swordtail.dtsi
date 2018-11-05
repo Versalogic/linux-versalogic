@@ -141,7 +141,7 @@
                 default_bpp = <24>;
                 int_clk = <0>;
                 late_init = <0>;
-                status = "okay";
+                status = "disabled";
         };
 
 	v4l2_out {
@@ -260,7 +260,6 @@
 	status = "okay";
 
 	lvds-channel@0 {
-                crtc = "ipu2-di0";
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <18>; /* change for panel type */
                 primary;
