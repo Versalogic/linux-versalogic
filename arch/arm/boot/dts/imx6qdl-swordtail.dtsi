@@ -81,6 +81,14 @@
                         enable-active-high;
                         hdmi-5v-supply = <&reg_5v>;
                 };
+                reg_ldb: regulator@6 {
+                        compatible = "regulator-fixed";
+                        reg = <6>;
+                        regulator-name = "ldb-supply";
+                        enable-active-high;
+                        gpio = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+                        regulator-boot-on;
+                };
 
 		reg_wl: regulator-wl { /* add */
 			compatible = "regulator-fixed"; /* add */
@@ -258,6 +266,7 @@
 
 &ldb {
 	status = "okay";
+        LDB-supply = <&reg_ldb>;
 
 	lvds-channel@0 {
 		fsl,data-mapping = "spwg";
@@ -280,6 +289,7 @@
 			};
 		};
 	};
+
 };
 /* I2C1 Not used in Swordtail */
 &i2c1 {
@@ -589,7 +599,7 @@
 				/* LVDS_BKLTEN: Slow slew, 90 Ohm, Slow speed, pull-down settings */
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	   0x00013018                       		
 				/* GPIO6_IO16 is LVDS_PANEL_PWREN output for Tetra and Swordtail */
-                                MX6QDL_PAD_NANDF_CS3__GPIO6_IO16           0x00013018 
+                                MX6QDL_PAD_NANDF_CS3__GPIO6_IO16           0x00013018
                                 /* GPIO6_IO07 is PG_V3P3_LVDS input for Tetra and Swordtail */
 				MX6QDL_PAD_NANDF_CLE__GPIO6_IO07           0x0001B018 
 

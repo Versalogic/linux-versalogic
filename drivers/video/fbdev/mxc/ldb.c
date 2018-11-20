@@ -24,6 +24,7 @@
 #include <video/of_videomode.h>
 #include <video/videomode.h>
 #include "mxc_dispdrv.h"
+#include <linux/regulator/driver.h>
 
 #define DRIVER_NAME	"ldb"
 
@@ -73,6 +74,8 @@ struct ldb_info {
 };
 
 struct ldb_data;
+
+static struct regulator *ldb_regulator;
 
 struct ldb_chan {
 	struct ldb_data *ldb;
@@ -697,6 +700,7 @@ static int ldb_probe(struct platform_device *pdev)
 	bool ext_ref;
 	int i, data_width, mapping, child_count = 0;
 	char clkname[16];
+	int x;
 
 	ldb = devm_kzalloc(dev, sizeof(*ldb), GFP_KERNEL);
 	if (!ldb)
@@ -881,6 +885,18 @@ static int ldb_probe(struct platform_device *pdev)
 	mxc_dispdrv_setdata(ldb->mddh, ldb);
 	dev_set_drvdata(&pdev->dev, ldb);
 
+        ldb_regulator = devm_regulator_get(&pdev->dev, "LDB");
+        if (!IS_ERR(ldb_regulator)) {
+                x = regulator_enable(ldb_regulator);
+                if (x) {
+                        dev_err(&pdev->dev, "enable ldb regulator failed\n");
+                }
+        } else {
+                ldb_regulator = NULL;
+                dev_warn(&pdev->dev, "No ldb supply\n");
+        }
+
+
 	return 0;
 }
 
@@ -890,6 +906,10 @@ static int ldb_remove(struct platform_device *pdev)
 
 	mxc_dispdrv_puthandle(ldb->mddh);
 	mxc_dispdrv_unregister(ldb->mddh);
+
+        if (ldb_regulator)
+                regulator_disable(ldb_regulator);
+
 	return 0;
 }
 
