@@ -169,6 +169,17 @@
 	arm-supply = <&sw1a_reg>;
 	soc-supply = <&sw1c_reg>;
 */
+	operating-points = <
+		/* kHz	uV */
+		792000	1175000 /* @792MHz VDDARM = 1.175V */
+		396000	1150000 /* @396MHz VDDARM = 1.15V */
+		>;
+	fsl,soc-operating-points = <
+		/* ARM kHz  SOC uV */
+		792000	1175000 /*@792MHz VDDSOC = 1.175V */
+		396000	1175000 /*@396MHz VDDSOC = 1.175V */
+		>;
+
 };
 
 &ecspi1 {
@@ -599,8 +610,6 @@
 
                                 /* Programmable LED (CPU_PLED) output for User I/O */
 				MX6QDL_PAD_NANDF_D0__GPIO2_IO00         0x0001B018
-				/* Wireless Disable (DISABLE_W#), default to off (pull-up since active low) */
-				MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x0001B098
 
                                 /* Updated for TP - can probe for 24MHz ref clk */
                                 MX6QDL_PAD_GPIO_3__XTALOSC_REF_CLK_24M     0x00013098 
@@ -665,6 +674,9 @@
 				/* PIN8: GPIO 8 */
                                 MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29          0x0001B018 /* GPIO 8 */
 
+                                /* GPIO 9 */
+                                MX6QDL_PAD_NANDF_D3__GPIO2_IO03            0x0001B098 /* GPIO 9 */
+
                                 /* GP_IRQ#, set as open drain (might have mult. drivers) */
                                 MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09         0x0001B818 
 
@@ -721,18 +733,18 @@
 				MX6QDL_PAD_ENET_MDC__ENET_MDC              0x0001B0B0
 				MX6QDL_PAD_ENET_MDIO__ENET_MDIO            0x0001B0A0
 				MX6QDL_PAD_ENET_REF_CLK__ENET_TX_CLK       0x0001B0B0
-				MX6QDL_PAD_RGMII_RD0__RGMII_RD0            0x0001B030
-				MX6QDL_PAD_RGMII_RD1__RGMII_RD1            0x0001B030
-				MX6QDL_PAD_RGMII_RD2__RGMII_RD2            0x0001B030
-				MX6QDL_PAD_RGMII_RD3__RGMII_RD3            0x0001B030
-				MX6QDL_PAD_RGMII_RXC__RGMII_RXC            0x00013030
-				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL      0x00013030
-				MX6QDL_PAD_RGMII_TD0__RGMII_TD0            0x0001B030
-				MX6QDL_PAD_RGMII_TD1__RGMII_TD1            0x0001B030
-				MX6QDL_PAD_RGMII_TD2__RGMII_TD2            0x0001B030
-				MX6QDL_PAD_RGMII_TD3__RGMII_TD3            0x0001B030
-				MX6QDL_PAD_RGMII_TXC__RGMII_TXC            0x00013030
-				MX6QDL_PAD_RGMII_TX_CTL__RGMII_TX_CTL      0x00013030
+				MX6QDL_PAD_RGMII_RD0__RGMII_RD0            0x0001B020
+				MX6QDL_PAD_RGMII_RD1__RGMII_RD1            0x0001B020
+				MX6QDL_PAD_RGMII_RD2__RGMII_RD2            0x0001B020
+				MX6QDL_PAD_RGMII_RD3__RGMII_RD3            0x0001B020
+				MX6QDL_PAD_RGMII_RXC__RGMII_RXC            0x00013020
+				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL      0x00013022
+				MX6QDL_PAD_RGMII_TD0__RGMII_TD0            0x0001B020
+				MX6QDL_PAD_RGMII_TD1__RGMII_TD1            0x0001B020
+				MX6QDL_PAD_RGMII_TD2__RGMII_TD2            0x0001B020
+				MX6QDL_PAD_RGMII_TD3__RGMII_TD3            0x0001B020
+				MX6QDL_PAD_RGMII_TXC__RGMII_TXC            0x00013020
+				MX6QDL_PAD_RGMII_TX_CTL__RGMII_TX_CTL      0x00013020
                                 /* RGMII_RST#, preserve u-boot pad control like SabreSD */
 				MX6QDL_PAD_ENET_CRS_DV__GPIO1_IO25         0x80000000
 				/* RGMII_INT# and RGMII_INT#_STATUS inputs respectively (GPIO)*/
@@ -837,8 +849,8 @@
 		pinctrl_usdhc2: usdhc2grp {
 			fsl,pins = <
 				/* clk and cmd have 22 Ohm series res on-board, so set to 25 Ohm@3.3V */
-				MX6QDL_PAD_SD2_CLK__SD2_CLK                0x000100B1 /* updated pull res off */
-				MX6QDL_PAD_SD2_CMD__SD2_CMD                0x000170B1 /* updated 47k pull-up */
+				MX6QDL_PAD_SD2_CLK__SD2_CLK                0x000100A1 /* updated pull res off */
+				MX6QDL_PAD_SD2_CMD__SD2_CMD                0x000170A1 /* updated 47k pull-up */
 				/* data don't have series resistors, so set to 50 Ohm@3.3V */
 				MX6QDL_PAD_SD2_DAT0__SD2_DATA0             0x00017098 /* updated 47k pull-up */
 				MX6QDL_PAD_SD2_DAT1__SD2_DATA1             0x00017098 /* updated 47k pull-up */
@@ -877,8 +889,8 @@
 		pinctrl_usdhc4: usdhc4grp {
 			fsl,pins = <
 				MX6QDL_PAD_NANDF_ALE__SD4_RESET            0x0001B098
-				MX6QDL_PAD_SD4_CLK__SD4_CLK                0x000100B1
-				MX6QDL_PAD_SD4_CMD__SD4_CMD                0x000170B1
+				MX6QDL_PAD_SD4_CLK__SD4_CLK                0x00010098
+				MX6QDL_PAD_SD4_CMD__SD4_CMD                0x00017098
 				MX6QDL_PAD_SD4_DAT0__SD4_DATA0             0x00017098
 				MX6QDL_PAD_SD4_DAT1__SD4_DATA1             0x00017098
 				MX6QDL_PAD_SD4_DAT2__SD4_DATA2             0x00017098
