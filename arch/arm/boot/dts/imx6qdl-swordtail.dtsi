@@ -1069,7 +1069,6 @@
 	bus-width = <4>;
 	non-removable; /* How do we set the bus to only 1.8V?  NVCC_SD3 = 1.8V, but is there a eFuse or register setting? */
 	keep-power-in-suspend;
-	enable-sdio-wakeup; /* need to set GPIO for wake to function??? */
 	status = "okay";
 };
 
