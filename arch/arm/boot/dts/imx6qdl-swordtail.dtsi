@@ -324,6 +324,19 @@
 				hsync-len = <60>; 
 				vsync-len = <10>;  
 			};
+/*
+			lvds_timing3: kyocera_tcg070wvlsjppa-gd20 {
+				clock-frequency = <33200000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <156>; 
+				hfront-porch = <40>;
+				vback-porch = <28>; 
+				vfront-porch = <7>;
+				hsync-len = <60>;
+				vsync-len = <10>;
+			};
+*/
 
 		};
 	};
@@ -345,7 +358,14 @@
                 compatible = "bosch,bme280";
                 reg = <0x77>;
         };
-
+/*
+        touch: touch@4b {
+                compatible = "atmel,maxtouch";
+                reg = <0x4a>;
+                interrupt-parent = <&gpio5>;
+                interrupts = <9 0>;
+        };
+*/
 };
 
 /* On-board devices only */
